@@ -1,4 +1,13 @@
 # pony.bzip2
+
+**WARNING: [THIS ONLY WORKS WITH MY FORK OF PONY](https://github.com/KittyMac/ponyc/tree/roc)**
+
+### Purpose
+
+This repository is just me hacking around with [Pony](https://www.ponylang.io). It should not be used as an example of good Pony programming practices.
+
+### Streaming decompression of bzip2 data
+
 A wrapper around the bzip2 library to allow for easy compression/decompression in Pony
 
 Utilizes the Streamable type available in the [pony.fileExt](https://github.com/KittyMac/pony.fileExt) library.

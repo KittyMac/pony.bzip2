@@ -76,11 +76,11 @@ actor BZ2StreamDecompress is Streamable
 			return
 		end
 	
-	be stream(chunkIso:Array[U8] iso) =>
+	be stream(chunkIso:ByteBlock iso) =>
 		
 		// If the decompression error'd out, then close the stream
 		if bzret != bz_ok then
-			target.stream(recover Array[U8] end)
+			target.stream(recover ByteBlock end)
 			return
 		end
 		
@@ -91,18 +91,7 @@ actor BZ2StreamDecompress is Streamable
 			// Decompress everything in this chunk
 			
 			let chunkSize:U32 = chunkIso.size().u32()
-			let chunkBuffer = recover Array[U8](chunkSize.usize()) end
-			chunkBuffer.undefined(chunkBuffer.space())
-			chunkBuffer.clear()
-			
-			/*
-			env.out.print("bzip2Stream.avail_in : " + bzip2Stream.avail_in.string())
-			env.out.print("bzip2Stream.total_in_lo32 : " + bzip2Stream.total_in_lo32.string())
-			env.out.print("bzip2Stream.total_in_hi32 : " + bzip2Stream.total_in_hi32.string())
-			env.out.print("bzip2Stream.avail_out : " + bzip2Stream.avail_out.string())
-			env.out.print("bzip2Stream.total_out_lo32 : " + bzip2Stream.total_out_lo32.string())
-			env.out.print("bzip2Stream.total_out_hi32 : " + bzip2Stream.total_out_hi32.string())
-			*/
+			let chunkBuffer = recover ByteBlock(chunkSize.usize()) end
 			
 			bzip2Stream.next_out = chunkBuffer.cpointer()
 			bzip2Stream.avail_out = chunkSize
@@ -110,13 +99,13 @@ actor BZ2StreamDecompress is Streamable
 			bzret = @BZ2_bzDecompress(NullablePointer[BZ2STREAM](bzip2Stream))
 			if (bzret != bz_ok) and (bzret != bz_stream_end) then
 		        @BZ2_bzDecompressEnd(NullablePointer[BZ2STREAM](bzip2Stream))
-				target.stream(recover Array[U8] end)
+				target.stream(recover ByteBlock end)
 				return
 			end
 			
 			let bytesRead = (chunkSize - bzip2Stream.avail_out).usize()
 			if bytesRead > 0 then
-				chunkBuffer.undefined(bytesRead)
+				chunkBuffer.truncate(bytesRead)
 				target.stream(consume chunkBuffer)
 			end
 
