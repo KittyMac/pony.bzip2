@@ -14,7 +14,7 @@ class iso _TestStringDecompression is UnitTest
 
 	fun apply(h: TestHelper) =>		
 		FileExtStreamReader(h.env, "test_large.bz2", 1024*1024*16,
-			BZ2StreamDecompress(h.env,
+			BZ2StreamDecompress(h.env, 1024*1024*16,
 				FileExtStreamWriterEnd(h.env, "/tmp/test_bzip_decompress.txt")
 			)
 		)
