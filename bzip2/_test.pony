@@ -15,7 +15,7 @@ class iso _TestStringDecompression is UnitTest
 
 	fun apply(h: TestHelper) =>	
 		try
-			var inFilePath = FilePath(h.env.root as AmbientAuth, "/Users/rjbowli/Downloads/NPD_HISTORICAL_LOGS/ProdAmazonErrorLog20190812t0000-To-20190813t0000.csv.8GB.bz2", FileCaps.>all())?
+			var inFilePath = FilePath(h.env.root as AmbientAuth, "test_large.bz2", FileCaps.>all())?
 			var outFilePath = FilePath(h.env.root as AmbientAuth, "/tmp/test_bzip_decompress.txt", FileCaps.>all())?
 
 			FileExtFlowReader(inFilePath, 1024*1024*16,
