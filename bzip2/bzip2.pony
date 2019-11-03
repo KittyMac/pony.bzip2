@@ -2,6 +2,7 @@
 
 use "collections"
 use "fileExt"
+use "flow"
 
 use "path:/usr/lib" if osx
 use "lib:bz2"
@@ -36,7 +37,7 @@ struct BZ2STREAM
 		bzfree = Pointer[U8]
 		opaque = Pointer[U8]
 
-actor BZ2StreamDecompress is Streamable
+actor BZ2FlowDecompress is Flowable
 
 	let bz_run:I32 = 0
 	let bz_flush:I32 = 1
@@ -57,16 +58,16 @@ actor BZ2StreamDecompress is Streamable
 	let bz_outbuff_full:I32 = -8
 	let bz_config_error:I32 = -9
 	
-	let target:Streamable tag
-	let env:Env
+	let target:Flowable tag
 	let bufferSize:USize
 	
 	var bzip2Stream:BZ2STREAM
 	var bzret:I32 = bz_ok
+	
+	fun _batch():USize => 4
 
-	new create(env':Env, bufferSize':USize, target':Streamable tag) =>
+	new create(bufferSize':USize, target':Flowable tag) =>
 		target = target'
-		env = env'
 		bufferSize = bufferSize'
 		
 		bzip2Stream = BZ2STREAM
@@ -76,46 +77,52 @@ actor BZ2StreamDecompress is Streamable
 			return
 		end
 	
-	be stream(chunkIso:ByteBlock iso) =>
-		let chunk = consume chunkIso
+	be flowFinished() =>
+		target.flowFinished()
+	
+	be flowReceived(dataIso:Any iso) =>
+		let data:Any ref = consume dataIso
 		
-		// If the decompression error'd out, then close the stream
+		// If the decompression error'd out, then we can't really do anything
 		if bzret != bz_ok then
-			target.stream(recover ByteBlock end)
 			return
 		end
 		
-		bzip2Stream.next_in = chunk.cpointer()
-		bzip2Stream.avail_in = chunk.size().u32()
+		try
+			let chunk = data as ByteBlock
 		
-		while (bzret == bz_ok) and (bzip2Stream.avail_in > 0) do
+			bzip2Stream.next_in = chunk.cpointer()
+			bzip2Stream.avail_in = chunk.size().u32()
+		
+			while (bzret == bz_ok) and (bzip2Stream.avail_in > 0) do
 						
-			let chunkBuffer = recover ByteBlock(bufferSize) end
-			bzip2Stream.next_out = chunkBuffer.cpointer()
-			bzip2Stream.avail_out = bufferSize.u32()
+				let chunkBuffer = recover ByteBlock(bufferSize) end
+				bzip2Stream.next_out = chunkBuffer.cpointer()
+				bzip2Stream.avail_out = bufferSize.u32()
 			
-			/*
-			env.out.print("bzip2Stream.avail_in : " + bzip2Stream.avail_in.string())
-			env.out.print("bzip2Stream.total_in_lo32 : " + bzip2Stream.total_in_lo32.string())
-			env.out.print("bzip2Stream.total_in_hi32 : " + bzip2Stream.total_in_hi32.string())
-			env.out.print("bzip2Stream.avail_out : " + bzip2Stream.avail_out.string())
-			env.out.print("bzip2Stream.total_out_lo32 : " + bzip2Stream.total_out_lo32.string())
-			env.out.print("bzip2Stream.total_out_hi32 : " + bzip2Stream.total_out_hi32.string())
-			*/
+				/*
+				env.out.print("bzip2Stream.avail_in : " + bzip2Stream.avail_in.string())
+				env.out.print("bzip2Stream.total_in_lo32 : " + bzip2Stream.total_in_lo32.string())
+				env.out.print("bzip2Stream.total_in_hi32 : " + bzip2Stream.total_in_hi32.string())
+				env.out.print("bzip2Stream.avail_out : " + bzip2Stream.avail_out.string())
+				env.out.print("bzip2Stream.total_out_lo32 : " + bzip2Stream.total_out_lo32.string())
+				env.out.print("bzip2Stream.total_out_hi32 : " + bzip2Stream.total_out_hi32.string())
+				*/
 
-			bzret = @BZ2_bzDecompress(NullablePointer[BZ2STREAM](bzip2Stream))
-			if (bzret != bz_ok) and (bzret != bz_stream_end) then
-				env.out.print("******* bzip2 error! ********")
-		        @BZ2_bzDecompressEnd(NullablePointer[BZ2STREAM](bzip2Stream))
-				target.stream(recover ByteBlock end)
-				return
+				bzret = @BZ2_bzDecompress(NullablePointer[BZ2STREAM](bzip2Stream))
+				if (bzret != bz_ok) and (bzret != bz_stream_end) then
+					@fprintf[I64](@pony_os_stdout[Pointer[U8]](), "bzip decompression error\n".cstring())
+			        @BZ2_bzDecompressEnd(NullablePointer[BZ2STREAM](bzip2Stream))
+					return
+				end
+			
+				let bytesRead = (bufferSize - bzip2Stream.avail_out.usize())
+				chunkBuffer.truncate(bytesRead)
+				target.flowReceived(consume chunkBuffer)
 			end
 			
-			let bytesRead = (bufferSize - bzip2Stream.avail_out.usize())
-			chunkBuffer.truncate(bytesRead)
-			target.stream(consume chunkBuffer)
+			chunk.free()
 		end
-				
 		
 		
 	
