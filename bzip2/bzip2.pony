@@ -65,6 +65,7 @@ actor BZ2FlowDecompress is Flowable
 	var bzret:I32 = bz_ok
 	
 	fun _batch():USize => 4
+	fun _tag():USize => 101
 
 	new create(bufferSize':USize, target':Flowable tag) =>
 		target = target'
