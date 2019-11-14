@@ -82,25 +82,35 @@ actor BZ2FlowDecompress is Flowable
 		target.flowFinished()
 	
 	be flowReceived(dataIso:Any iso) =>
+		// Why do we do this? The file reader is much faster than we are, so it immediately
+		// populates our mailbox with x number of chunks for us to process. It takes us a long
+		// time to process a chunk (essentially the entire length of the program running!).
+		// System messages (such as from the GC) get queued behind these chunks and never have a
+		// chance to process since we're so busy.  To combat this, we simply grab the next chunk
+		// and the redirect it to the back of our mailbox, allowing us to process the system
+		// messages in-between.
+		_delayedProcessChunk(consume dataIso)
+	
+	be _delayedProcessChunk(dataIso:Any iso) =>
 		let data:Any ref = consume dataIso
-		
+	
 		// If the decompression error'd out, then we can't really do anything
 		if bzret != bz_ok then
 			return
 		end
-		
+	
 		try
 			let chunk = data as ByteBlock
-		
+	
 			bzip2Stream.next_in = chunk.cpointer()
 			bzip2Stream.avail_in = chunk.size().u32()
-		
+	
 			while (bzret == bz_ok) and (bzip2Stream.avail_in > 0) do
-						
+					
 				let chunkBuffer = recover ByteBlock(bufferSize) end
 				bzip2Stream.next_out = chunkBuffer.cpointer()
 				bzip2Stream.avail_out = bufferSize.u32()
-			
+		
 				/*
 				env.out.print("bzip2Stream.avail_in : " + bzip2Stream.avail_in.string())
 				env.out.print("bzip2Stream.total_in_lo32 : " + bzip2Stream.total_in_lo32.string())
@@ -116,12 +126,12 @@ actor BZ2FlowDecompress is Flowable
 			        @BZ2_bzDecompressEnd(NullablePointer[BZ2STREAM](bzip2Stream))
 					return
 				end
-			
+		
 				let bytesRead = (bufferSize - bzip2Stream.avail_out.usize())
 				chunkBuffer.truncate(bytesRead)
 				target.flowReceived(consume chunkBuffer)
 			end
-			
+		
 			chunk.free()
 		end
 		
