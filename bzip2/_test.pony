@@ -8,20 +8,26 @@ actor Main is TestList
 
 	fun tag tests(test: PonyTest) =>
 		test(_TestStringDecompression)
+	
+ 	fun @runtime_override_defaults(rto: RuntimeOptions) =>
+		rto.ponyminthreads = 2
+		rto.ponynoblock = true
+		rto.ponygcinitial = 0
+		rto.ponygcfactor = 1.0
 
 
 class iso _TestStringDecompression is UnitTest
 	fun name(): String => "small file decompression"
 
 	fun apply(h: TestHelper) =>	
-		try
-			var inFilePath = FilePath(h.env.root as AmbientAuth, "test_large.bz2", FileCaps.>all())?
-			var outFilePath = FilePath(h.env.root as AmbientAuth, "/tmp/test_bzip_decompress.txt", FileCaps.>all())?
+		var inFilePath = "test_large.bz2"
+		var outFilePath = "/tmp/test_bzip_decompress.txt"
 
-			FileExtFlowReader(inFilePath, 1024*1024*16,
-				BZ2FlowDecompress(1024*1024*16,
+		FileExtFlowReader(inFilePath, 1024*1024*16,
+			BZ2FlowDecompress(1024*1024*16,
+				FileExtFlowByteCounter(
 					FileExtFlowWriterEnd(outFilePath)
 				)
 			)
-		end
+		)
 		

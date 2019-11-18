@@ -64,7 +64,6 @@ actor BZ2FlowDecompress is Flowable
 	var bzip2Stream:BZ2STREAM
 	var bzret:I32 = bz_ok
 	
-	fun _batch():USize => 4
 	fun _tag():USize => 101
 
 	new create(bufferSize':USize, target':Flowable tag) =>
@@ -90,14 +89,14 @@ actor BZ2FlowDecompress is Flowable
 		end
 	
 		try
-			let chunk = data as ByteBlock
+			let chunk = data as CPointer
 	
 			bzip2Stream.next_in = chunk.cpointer()
 			bzip2Stream.avail_in = chunk.size().u32()
 	
 			while (bzret == bz_ok) and (bzip2Stream.avail_in > 0) do
 					
-				let chunkBuffer = recover ByteBlock(bufferSize) end
+				let chunkBuffer = recover iso Array[U8](bufferSize) end
 				bzip2Stream.next_out = chunkBuffer.cpointer()
 				bzip2Stream.avail_out = bufferSize.u32()
 		
@@ -118,11 +117,11 @@ actor BZ2FlowDecompress is Flowable
 				end
 		
 				let bytesRead = (bufferSize - bzip2Stream.avail_out.usize())
-				chunkBuffer.truncate(bytesRead)
+				chunkBuffer.undefined(bytesRead)
 				target.flowReceived(consume chunkBuffer)
 			end
-		
-			chunk.free()
+		else
+			@fprintf[I64](@pony_os_stdout[Pointer[U8]](), "BZ2FlowDecompress requires a CPointer flowable\n".cstring())
 		end
 		
 		

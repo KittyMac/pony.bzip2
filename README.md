@@ -1,6 +1,6 @@
 # pony.bzip2
 
-**WARNING: [THIS ONLY WORKS WITH MY FORK OF PONY](https://github.com/KittyMac/ponyc/tree/roc)**
+**WARNING** While this code should work with standard Pony, it is designed to take full advantage of the changes I have introduced in [my fork of Pony](https://github.com/KittyMac/ponyc/tree/roc_master). Most of the changes to Pony involve improvements to the Pony runtime. The list of these changes are documented in my [pony.problems](https://github.com/KittyMac/pony.problems) respository.
 
 ### Purpose
 
@@ -10,7 +10,7 @@ This repository is just me hacking around with [Pony](https://www.ponylang.io). 
 
 A wrapper around the bzip2 library to allow for easy compression/decompression in Pony
 
-Utilizes the Streamable type available in the [pony.fileExt](https://github.com/KittyMac/pony.fileExt) library.
+Utilizes the Flowable type available in the [pony.fileExt](https://github.com/KittyMac/pony.fileExt) library.
 
 ```
 FileExtStreamReader(h.env, "test_large.bz2", 1024*1024*16,
