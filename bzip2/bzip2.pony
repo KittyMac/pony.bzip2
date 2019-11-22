@@ -111,7 +111,7 @@ actor BZ2FlowDecompress is Flowable
 
 				bzret = @BZ2_bzDecompress(NullablePointer[BZ2STREAM](bzip2Stream))
 				if (bzret != bz_ok) and (bzret != bz_stream_end) then
-					@fprintf[I64](@pony_os_stdout[Pointer[U8]](), "bzip decompression error\n".cstring())
+					@fprintf[I32](@pony_os_stdout[Pointer[U8]](), "bzip decompression error\n".cstring())
 			        @BZ2_bzDecompressEnd(NullablePointer[BZ2STREAM](bzip2Stream))
 					return
 				end
@@ -121,7 +121,7 @@ actor BZ2FlowDecompress is Flowable
 				target.flowReceived(consume chunkBuffer)
 			end
 		else
-			@fprintf[I64](@pony_os_stdout[Pointer[U8]](), "BZ2FlowDecompress requires a CPointer flowable\n".cstring())
+			@fprintf[I32](@pony_os_stdout[Pointer[U8]](), "BZ2FlowDecompress requires a CPointer flowable\n".cstring())
 		end
 		
 		
