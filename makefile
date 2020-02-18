@@ -1,5 +1,5 @@
 all:
-	corral run -- ponyc -o ./build/ ./bzip2
+	corral run -- ponyc --print-code -o ./build/ ./bzip2
 	./build/bzip2
 
 test:

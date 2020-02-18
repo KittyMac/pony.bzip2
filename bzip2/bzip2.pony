@@ -7,62 +7,14 @@ use "flow"
 use "path:/usr/lib" if osx
 use "lib:bz2"
 
-use @BZ2_bzDecompressInit[I32](strm: NullablePointer[BZ2STREAM] ref, verbosity: I32, small: I32)
-use @BZ2_bzDecompress[I32](strm: NullablePointer[BZ2STREAM] ref)
-use @BZ2_bzDecompressEnd[I32](strm: NullablePointer[BZ2STREAM] ref)
-
   
-struct BZ2STREAM
-	var next_in:Pointer[U8] tag
-	var avail_in:U32 = 0
-	var total_in_lo32:U32 = 0
-	var total_in_hi32:U32 = 0
-
-	var next_out:Pointer[U8] tag
-	var avail_out:U32 = 0
-	var total_out_lo32:U32 = 0
-	var total_out_hi32:U32 = 0
-
-	var state:Pointer[U8] tag
-
-	var bzalloc:Pointer[U8] tag
-	var bzfree:Pointer[U8] tag
-	var opaque:Pointer[U8] tag
-	
-	new create() =>
-		next_in = Pointer[U8]
-		next_out = Pointer[U8]
-		state = Pointer[U8]
-		bzalloc = Pointer[U8]
-		bzfree = Pointer[U8]
-		opaque = Pointer[U8]
-
 actor BZ2FlowDecompress is Flowable
-
-	let bz_run:I32 = 0
-	let bz_flush:I32 = 1
-	let bz_finish:I32 = 2
-
-	let bz_ok:I32 = 0
-	let bz_run_ok:I32 = 1
-	let bz_flush_ok:I32 = 2
-	let bz_finish_ok:I32 = 3
-	let bz_stream_end:I32 = 4
-	let bz_sequence_error:I32 = -1
-	let bz_param_error:I32 = -2
-	let bz_mem_error:I32 = -3
-	let bz_data_error:I32 = -4
-	let bz_data_error_magic:I32 = -5
-	let bz_io_error:I32 = -6
-	let bz_unexpected_eof:I32 = -7
-	let bz_outbuff_full:I32 = -8
-	let bz_config_error:I32 = -9
 	
 	let target:Flowable tag
 	let bufferSize:USize
 	
-	var bzip2Stream:BZ2STREAM
-	var bzret:I32 = bz_ok
+	var bzip2Stream:BzStream
+	var bzret:U32 = Bz.ok()
 	
 	fun _tag():USize => 101
 
@@ -70,10 +22,10 @@ actor BZ2FlowDecompress is Flowable
 		target = target'
 		bufferSize = bufferSize'
 		
-		bzip2Stream = BZ2STREAM
+		bzip2Stream = BzStream
 						
-		bzret = @BZ2_bzDecompressInit(NullablePointer[BZ2STREAM](bzip2Stream), 0, 0)
-		if bzret != bz_ok then
+		bzret = @BZ2_bzDecompressInit(BzStreamRef(bzip2Stream), 0, 0).u32()
+		if bzret != Bz.ok() then
 			return
 		end
 	
@@ -84,7 +36,7 @@ actor BZ2FlowDecompress is Flowable
 		let data:Any ref = consume dataIso
 	
 		// If the decompression error'd out, then we can't really do anything
-		if bzret != bz_ok then
+		if bzret != Bz.ok() then
 			return
 		end
 	
@@ -94,7 +46,7 @@ actor BZ2FlowDecompress is Flowable
 			bzip2Stream.next_in = chunk.cpointer()
 			bzip2Stream.avail_in = chunk.size().u32()
 	
-			while (bzret == bz_ok) and (bzip2Stream.avail_in > 0) do
+			while (bzret == Bz.ok()) and (bzip2Stream.avail_in > 0) do
 					
 				let chunkBuffer = recover iso Array[U8](bufferSize) end
 				bzip2Stream.next_out = chunkBuffer.cpointer()
@@ -109,10 +61,10 @@ actor BZ2FlowDecompress is Flowable
 				env.out.print("bzip2Stream.total_out_hi32 : " + bzip2Stream.total_out_hi32.string())
 				*/
 
-				bzret = @BZ2_bzDecompress(NullablePointer[BZ2STREAM](bzip2Stream))
-				if (bzret != bz_ok) and (bzret != bz_stream_end) then
+				bzret = @BZ2_bzDecompress(BzStreamRef(bzip2Stream)).u32()
+				if (bzret != Bz.ok()) and (bzret != Bz.stream_end()) then
 					@fprintf[I32](@pony_os_stdout[Pointer[U8]](), "bzip decompression error\n".cstring())
-			        @BZ2_bzDecompressEnd(NullablePointer[BZ2STREAM](bzip2Stream))
+			        @BZ2_bzDecompressEnd(BzStreamRef(bzip2Stream))
 					return
 				end
 		
